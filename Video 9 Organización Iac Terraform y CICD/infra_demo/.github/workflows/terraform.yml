@@ -1,0 +1,129 @@
+name: IaC - Terraform/Terragrunt
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Execution mode"
+        type: choice
+        options:
+          - environments
+          - workspaces
+          - live
+        default: environments
+      environment:
+        description: "Target environment"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+        default: dev
+
+jobs:
+  tf-environments:
+    name: Terraform (per-environment)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'environments' || github.event_name == 'push' }}
+    env:
+      ENV_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init (remote backend)
+        run: terraform init -reconfigure -backend-config=backend.hcl
+        working-directory: infra_demo/terraform/environments/${{ env.ENV_NAME }}
+
+      - name: Terraform Plan
+        run: terraform plan -out tfplan
+        working-directory: infra_demo/terraform/environments/${{ env.ENV_NAME }}
+
+      - name: Terraform Apply
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: terraform apply -auto-approve tfplan
+        working-directory: infra_demo/terraform/environments/${{ env.ENV_NAME }}
+
+  tf-workspaces:
+    name: Terraform (workspaces)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'workspaces' }}
+    env:
+      ENV_NAME: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init (remote backend)
+        run: |
+          terraform init -reconfigure -backend-config=backend.${{ env.ENV_NAME }}.hcl
+        working-directory: infra_demo/terraform_workspaces
+
+      - name: Select/Create Workspace
+        run: |
+          terraform workspace select ${{ env.ENV_NAME }} || terraform workspace new ${{ env.ENV_NAME }}
+        working-directory: infra_demo/terraform_workspaces
+
+      - name: Terraform Plan
+        run: terraform plan -out tfplan
+        working-directory: infra_demo/terraform_workspaces
+
+      - name: Terraform Apply
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: terraform apply -auto-approve tfplan
+        working-directory: infra_demo/terraform_workspaces
+
+  terragrunt:
+    name: Terragrunt Live (per-environment)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'live' }}
+    env:
+      ENV_NAME: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION=v0.58.7
+          curl -L https://github.com/gruntwork-io/terragrunt/releases/download/${TG_VERSION}/terragrunt_linux_amd64 -o terragrunt
+          sudo install terragrunt /usr/local/bin/terragrunt
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terragrunt Init
+        working-directory: infra_demo/live/${{ env.ENV_NAME }}
+        run: terragrunt init -no-color
+
+      - name: Terragrunt Plan
+        working-directory: infra_demo/live/${{ env.ENV_NAME }}
+        run: terragrunt plan -out tgplan -no-color -input=false
+
+      - name: Terragrunt Apply
+        if: ${{ github.ref == 'refs/heads/main' }}
+        working-directory: infra_demo/live/${{ env.ENV_NAME }}
+        run: terragrunt apply -auto-approve -no-color tgplan
