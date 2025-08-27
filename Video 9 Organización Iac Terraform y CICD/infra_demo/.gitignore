@@ -1,0 +1,32 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+crash.log
+debug.log
+drift.log
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# Local .env files
+.env*
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.pfx
+# Plan files
+tfplan
+*.plan
+# Ignore backup files
+*.backup
+# Ignore directories for Terragrunt
+.terragrunt-cache/
+# Ignore VS Code settings
+.vscode/
