@@ -1,0 +1,20 @@
+@httpsBase = https://localhost:63101
+@httpBase = http://localhost:63102
+
+### List threats (default page size from config)
+# @name listThreats
+GET {{httpsBase}}/api/threats
+Accept: application/json
+
+### List threats with limit and keyword
+# @name listThreatsWithQuery
+@limit = 10
+@keyword = windows
+GET {{httpsBase}}/api/threats?limit={{limit}}&keyword={{keyword}}
+Accept: application/json
+
+### Get threat by CVE ID
+# @name getThreatById
+@cveId = CVE-2024-3094
+GET {{httpsBase}}/api/threats/{{cveId}}
+Accept: application/json
