@@ -3,16 +3,20 @@ name: Build & Deploy Container to Azure Web App (ACR)
 on:
   push:
     branches: ["main"]
+    paths:
+      - "Video 10 Integración Iac CICD Web Api/**"
+      - ".github/workflows/deploy-container-acr.yml"
   workflow_dispatch:
 
 env:
-  APP_NAME: ${{ vars.APP_SERVICE_NAME }} # e.g. nvd-proxy-dev
-  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }} # e.g. rg-dev
-  ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }} # e.g. myregistry.azurecr.io
+  APP_NAME: nvd-proxy-dev
+  RESOURCE_GROUP: unirdemos
+  ACR_LOGIN_SERVER: jsmacr15.azurecr.io
   IMAGE_NAME: nvd-proxy
   IMAGE_TAG: ${{ github.sha }}
-  DOCKERFILE: ./webapi/Dockerfile
-  CONTEXT: ./webapi
+  DOCKERFILE: "./Video 10 Integración Iac CICD Web Api/webapi/Dockerfile"
+  CONTEXT: "./Video 10 Integración Iac CICD Web Api/webapi"
+  TERRAFORM_DIR: "./Video 10 Integración Iac CICD Web Api/terraform/Terraform"
 
 jobs:
   build-push-deploy:
@@ -33,11 +37,11 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-        working-directory: terraform/Terraform
+        working-directory: ${{ env.TERRAFORM_DIR }}
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-        working-directory: terraform/Terraform
+        working-directory: ${{ env.TERRAFORM_DIR }}
 
       - name: Terraform Apply (initial infra - env, ACR, identity)
         run: |
@@ -48,7 +52,7 @@ jobs:
             -target azurerm_container_registry.jsmacr15 \
             -target azurerm_user_assigned_identity.acr_pull \
             -target azurerm_role_assignment.acr_pull
-        working-directory: terraform/Terraform
+        working-directory: ${{ env.TERRAFORM_DIR }}
 
       - name: Login to ACR via Azure CLI
         run: |
@@ -67,19 +71,7 @@ jobs:
       - name: Terraform Apply (deploy container app revision)
         run: |
           terraform apply -auto-approve -var "image_tag=${{ env.IMAGE_TAG }}"
-        working-directory: terraform/Terraform
-
-      # Optional: If you still use App Service, keep these steps or remove if fully on Container Apps
-      #- name: Point Web App to ACR image
-      #  run: |
-      #    az webapp config container set \
-      #      -g "${{ env.RESOURCE_GROUP }}" \
-      #      -n "${{ env.APP_NAME }}" \
-      #      --docker-custom-image-name "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" \
-      #      --docker-registry-server-url "https://${{ env.ACR_LOGIN_SERVER }}"
-
-      #- name: Restart Web App
-      #  run: az webapp restart -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.APP_NAME }}"
+        working-directory: ${{ env.TERRAFORM_DIR }}
 
       - name: Logout Azure
         if: always()
