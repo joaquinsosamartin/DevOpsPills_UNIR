@@ -3,6 +3,8 @@ provider "azurerm" {
   use_cli = true
 }
 
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_resource_group" "unir" {
   name     = "unirdemos"
   location = "Spain Central"
@@ -38,6 +40,13 @@ resource "azurerm_container_registry" "jsmacr15" {
   tags = {
     Environment = "dev"
   }
+}
+
+# Grant the GitHub OIDC principal (current caller) AcrPush on the ACR so CI can push images
+resource "azurerm_role_assignment" "acr_push_github" {
+  scope                = azurerm_container_registry.jsmacr15.id
+  role_definition_name = "AcrPush"
+  principal_id         = data.azurerm_client_config.current.object_id
 }
 
 variable "image_tag" {
