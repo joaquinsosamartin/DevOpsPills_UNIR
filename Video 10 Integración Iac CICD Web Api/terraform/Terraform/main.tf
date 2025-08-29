@@ -5,23 +5,23 @@ provider "azurerm" {
 
 data "azurerm_client_config" "current" {}
 
-resource "azurerm_resource_group" "unir" {
-  name     = "unirdemos"
-  location = "Spain Central"
-}
+# resource "azurerm_resource_group" "unir" {
+#   name     = "unirdemos"
+#   location = "Spain Central"
+# }
 
 resource "azurerm_log_analytics_workspace" "logAnalytics" {
   name                = "logAnalytics"
-  location            = azurerm_resource_group.unir.location
-  resource_group_name = azurerm_resource_group.unir.name
+  location            = "Spain Central"
+  resource_group_name = "unirdemos"
   sku                 = "PerGB2018"
   retention_in_days   = 30
 }
 
 resource "azurerm_container_app_environment" "managedEnv20250828125507" {
   name                       = "managedEnv20250828125507"
-  location                   = azurerm_resource_group.unir.location
-  resource_group_name        = azurerm_resource_group.unir.name
+  location                   = "Spain Central"
+  resource_group_name        = "unirdemos"
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logAnalytics.id
 
@@ -32,8 +32,8 @@ resource "azurerm_container_app_environment" "managedEnv20250828125507" {
 
 resource "azurerm_container_registry" "jsmacr15" {
   name                = "jsmacr15"
-  resource_group_name = azurerm_resource_group.unir.name
-  location            = azurerm_resource_group.unir.location
+  resource_group_name = "unirdemos"
+  location            = "Spain Central"
   sku                 = "Basic"
   admin_enabled       = false
 
@@ -58,8 +58,8 @@ variable "image_tag" {
 # Identity used by the Container App to pull images from ACR
 resource "azurerm_user_assigned_identity" "acr_pull" {
   name                = "uami-acr-pull"
-  location            = azurerm_resource_group.unir.location
-  resource_group_name = azurerm_resource_group.unir.name
+  location            = "Spain Central"
+  resource_group_name = "unirdemos"
 }
 
 # Grant AcrPull to the identity on the ACR
@@ -72,7 +72,7 @@ resource "azurerm_role_assignment" "acr_pull" {
 # Azure Container App referencing the ACR image
 resource "azurerm_container_app" "nvdproxy" {
   name                         = "nvdproxy"
-  resource_group_name          = azurerm_resource_group.unir.name
+  resource_group_name          = "unirdemos"
   container_app_environment_id = azurerm_container_app_environment.managedEnv20250828125507.id
   revision_mode                = "Single"
 
