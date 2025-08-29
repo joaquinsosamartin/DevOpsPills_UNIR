@@ -72,7 +72,6 @@ resource "azurerm_role_assignment" "acr_pull" {
 # Azure Container App referencing the ACR image
 resource "azurerm_container_app" "nvdproxy" {
   name                         = "nvdproxy"
-  location                     = azurerm_resource_group.unir.location
   resource_group_name          = azurerm_resource_group.unir.name
   container_app_environment_id = azurerm_container_app_environment.managedEnv20250828125507.id
   revision_mode                = "Single"
