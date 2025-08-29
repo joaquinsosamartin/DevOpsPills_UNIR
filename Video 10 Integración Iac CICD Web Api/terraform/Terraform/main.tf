@@ -1,6 +1,6 @@
 provider "azurerm" {
   features {}
-  # use_cli = true lanzar en local
+  # use_cli = true #lanzar en local
 }
 
 data "azurerm_client_config" "current" {}
