@@ -1,0 +1,23 @@
+## Dockerfile básico (no recomendado para producción)
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar todo el código fuente y archivos de proyecto
+COPY . .
+
+# Restaurar, compilar, ejecutar pruebas y publicar la aplicación
+RUN dotnet restore "PrimeNumbersWebApi/PrimeNumbersWebApi.csproj" \
+    && dotnet build "PrimeNumbersWebApi/PrimeNumbersWebApi.csproj" -c Release -o /app/build \
+    && dotnet test "MathLibrary.Tests/MathLibrary.Tests.csproj" --no-build \
+    && dotnet test "PrimeNumbersWebApi.Tests/PrimeNumbersWebApi.Tests.csproj" --no-build \
+    && dotnet publish "PrimeNumbersWebApi/PrimeNumbersWebApi.csproj" -c Release -o /app/publish
+
+# Cambiar al directorio de publicación
+WORKDIR /app/publish
+
+# Exponer el puerto predeterminado de ASP.NET
+EXPOSE 8080
+
+# Ejecutar como root (por defecto)
+ENTRYPOINT ["dotnet", "PrimeNumbersWebApi.dll"]
