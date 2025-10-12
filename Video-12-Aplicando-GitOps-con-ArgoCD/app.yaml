@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/example/guestbook-unir
+    repoURL: https://github.com/joaquinsosamartin/DevOpsPills_UNIR.git
     targetRevision: HEAD
-    path: manifests/guestbook
+    path: Video-12-Aplicando-GitOps-con-ArgoCD/manifests/guestbook
   destination:
     server: https://kubernetes.default.svc
     namespace: default
