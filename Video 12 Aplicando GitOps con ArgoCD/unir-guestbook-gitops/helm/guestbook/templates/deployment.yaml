@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guestbook.fullname" . }}
+  labels:
+    app: {{ include "guestbook.name" . }}
+    chart: {{ include "guestbook.chart" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "guestbook.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "guestbook.name" . }}
+    spec:
+      containers:
+        - name: guestbook
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: PORT
+              value: "{{ .Values.service.targetPort }}"
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_HOST
+              value: "{{ include "guestbook.fullname" . }}-redis"
+            - name: REDIS_PORT
+              value: "{{ .Values.redis.port }}"
+            {{- if .Values.redis.password }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "guestbook.fullname" . }}-redis
+                  key: password
+            {{- end }}
+            {{- end }}

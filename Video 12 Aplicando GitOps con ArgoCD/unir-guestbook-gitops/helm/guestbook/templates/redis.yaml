@@ -1,0 +1,52 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "guestbook.fullname" . }}-redis
+type: Opaque
+data:
+  {{- if .Values.redis.password }}
+  password: {{ .Values.redis.password | b64enc }}
+  {{- else }}
+  password: ""
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guestbook.fullname" . }}-redis
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "guestbook.fullname" . }}-redis
+  template:
+    metadata:
+      labels:
+        app: {{ include "guestbook.fullname" . }}-redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          ports:
+            - containerPort: {{ .Values.redis.port }}
+          {{- if .Values.redis.password }}
+          args: ["--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "guestbook.fullname" . }}-redis
+                  key: password
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guestbook.fullname" . }}-redis
+spec:
+  selector:
+    app: {{ include "guestbook.fullname" . }}-redis
+  ports:
+    - port: {{ .Values.redis.port }}
+      targetPort: {{ .Values.redis.port }}
+{{- end }}

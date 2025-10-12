@@ -1,0 +1,9 @@
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+ingress:
+  enabled: false
+redis:
+  enabled: true
+  password: ""

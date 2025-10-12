@@ -1,0 +1,123 @@
+name: Build, Push to ACR & Deploy to AKS (All-in-One)
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "app/**"
+      - "helm/guestbook/**"
+      - ".github/workflows/build-push-deploy-acr-aks.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag de imagen (por defecto: SHA del commit)"
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+  packages: read
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}   # p.ej. rg-dev
+  AKS_NAME: ${{ vars.AKS_NAME }}                     # p.ej. aks-dev
+  ACR_NAME: ${{ vars.ACR_NAME }}                     # p.ej. miacrdev
+  IMAGE_NAME: guestbook-unir
+  NAMESPACE: guestbook
+  CHART_PATH: ./helm/guestbook
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      service_url: ${{ steps.verify.outputs.service_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR login server
+        id: acr
+        shell: bash
+        run: |
+          set -e
+          LOGIN_SERVER=$(az acr show -n "${{ env.ACR_NAME }}" --query loginServer -o tsv)
+          echo "login_server=${LOGIN_SERVER}" >> $GITHUB_OUTPUT
+
+      - name: ACR Login (via Azure CLI)
+        run: az acr login -n "${{ env.ACR_NAME }}"
+
+      - name: Build & Push image to ACR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag || github.sha }}
+            ${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Get AKS credentials
+        run: az aks get-credentials -g "${{ env.RESOURCE_GROUP }}" -n "${{ env.AKS_NAME }}" --overwrite-existing
+
+      - name: Create namespace (if not exists)
+        run: kubectl create ns "${{ env.NAMESPACE }}" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Helm upgrade/install
+        shell: bash
+        run: |
+          set -e
+          IMAGE_REPO="${{ steps.acr.outputs.login_server }}/${{ env.IMAGE_NAME }}"
+          TAG="${{ github.event.inputs.image_tag || github.sha }}"
+          helm upgrade --install guestbook "${{ env.CHART_PATH }}" -n "${{ env.NAMESPACE }}"             -f "${{ env.CHART_PATH }}/values-aks.yaml"             --set image.repository="${IMAGE_REPO}"             --set image.tag="${TAG}"
+
+      - name: Verify deployment & publish URL
+        id: verify
+        shell: bash
+        run: |
+          set -e
+          echo "Esperando External IP del Service guestbook..."
+          for i in {1..30}; do
+            HOSTNAME=$(kubectl -n "${{ env.NAMESPACE }}" get svc guestbook -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+            IP=$(kubectl -n "${{ env.NAMESPACE }}" get svc guestbook -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            ADDR="${HOSTNAME:-$IP}"
+            if [ -n "$ADDR" ]; then
+              URL="http://$ADDR"
+              echo "service_url=$URL" >> $GITHUB_OUTPUT
+              echo "Service disponible en: $URL"
+              break
+            fi
+            sleep 10
+          done
+          if [ -z "$ADDR" ]; then
+            echo "No se obtuvo External IP/Hostname del Service en el tiempo esperado."
+            exit 1
+          fi
+          echo "Verificando endpoint de salud..."
+          for i in {1..12}; do
+            if curl -fsS "$URL/api/health" >/dev/null; then
+              echo "Aplicación OK en $URL/api/health"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Fallo de verificación: /api/health no responde correctamente"
+          exit 1
+
+      - name: Show services
+        if: always()
+        run: kubectl get svc -n "${{ env.NAMESPACE }}" -o wide
+
+      - name: Publicar URL como anotación
+        if: always()
+        run: echo "::notice title=Service URL::${{ steps.verify.outputs.service_url }}"
+
+      - name: Logout Azure
+        if: always()
+        run: az logout
