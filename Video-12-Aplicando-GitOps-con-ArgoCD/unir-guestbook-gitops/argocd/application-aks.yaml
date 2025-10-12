@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/REPLACE_ME/REPO.git
+    repoURL: https://github.com/joaquinsosamartin/DevOpsPills_UNIR.git
     targetRevision: HEAD
-    path: helm/guestbook
+    path: Video-12-Aplicando-GitOps-con-ArgoCD/helm/guestbook
     helm:
       valueFiles:
         - values-aks.yaml

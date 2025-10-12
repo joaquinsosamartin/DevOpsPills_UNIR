@@ -1,8 +1,7 @@
-version: '3'
 services:
   argocd-server:
     image: argoproj/argocd:v2.10.5
     container_name: argocd-server
     ports:
       - "8080:8080"
-    command: [ "argocd-server", "--insecure" ]
+    command: ["argocd-server", "--insecure"]
