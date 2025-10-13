@@ -1,6 +1,6 @@
 services:
   argocd-server:
-    image: argoproj/argocd:v2.10.5
+    image: argoproj/argocd:v2.6.15
     container_name: argocd-server
     ports:
       - "8080:8080"

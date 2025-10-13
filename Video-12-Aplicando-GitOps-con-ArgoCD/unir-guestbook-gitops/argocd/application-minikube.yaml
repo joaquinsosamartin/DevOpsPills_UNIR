@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/joaquinsosamartin/DevOpsPills_UNIR.git
     targetRevision: HEAD
-    path: Video-12-Aplicando-GitOps-con-ArgoCD/helm/guestbook
+    path: Video-12-Aplicando-GitOps-con-ArgoCD/unir-guestbook-gitops/helm/guestbook
     helm:
       valueFiles:
         - values-minikube.yaml
