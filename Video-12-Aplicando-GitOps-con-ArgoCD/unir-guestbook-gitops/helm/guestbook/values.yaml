@@ -1,8 +1,8 @@
 replicaCount: 2
 
 image:
-  repository: jsmacr15.azurecr.io/guestbook-unir
-  tag: latest
+  repository: /guestbook-unir
+  tag: local
   pullPolicy: IfNotPresent
 
 service:
