@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: guestbook
-        image: nginx
+        image: guestbook-unir:local
+        imagePullPolicy: Never
         ports:
         - containerPort: 80
         resources:
