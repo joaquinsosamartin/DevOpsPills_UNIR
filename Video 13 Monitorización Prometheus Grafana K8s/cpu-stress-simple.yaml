@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stress-load
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-stress
+  template:
+    metadata:
+      labels:
+        app: cpu-stress
+    spec:
+      containers:
+      - name: cpu-stress
+        image: busybox
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Generando carga de CPU..."
+          while true; do
+            dd if=/dev/zero of=/dev/null bs=1M count=500 &
+            dd if=/dev/zero of=/dev/null bs=1M count=500 &
+            dd if=/dev/zero of=/dev/null bs=1M count=500 &
+            sleep 5
+            killall dd 2>/dev/null || true
+            sleep 1
+          done
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 1000m
+            memory: 128Mi

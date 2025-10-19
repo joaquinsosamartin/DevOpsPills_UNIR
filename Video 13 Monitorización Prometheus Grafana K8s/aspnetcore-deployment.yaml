@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspnetcore-metrics-app
+  labels:
+    app: aspnetcore-metrics-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspnetcore-metrics-app
+  template:
+    metadata:
+      labels:
+        app: aspnetcore-metrics-app
+    spec:
+      containers:
+      - name: aspnetcore-metrics-app
+        image: aspnetcore-metrics-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aspnetcore-metrics-service
+  labels:
+    app: aspnetcore-metrics-app
+spec:
+  selector:
+    app: aspnetcore-metrics-app
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

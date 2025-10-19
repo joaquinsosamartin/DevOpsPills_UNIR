@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-intensive-load
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cpu-load
+  template:
+    metadata:
+      labels:
+        app: cpu-load
+    spec:
+      containers:
+      - name: cpu-load
+        image: busybox
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Generando carga intensiva de CPU..."
+          while true; do
+            # Crear múltiples procesos intensivos
+            for i in $(seq 1 8); do
+              dd if=/dev/zero of=/dev/null bs=1M count=1000 &
+            done
+            sleep 10
+            # Limpiar procesos
+            killall dd 2>/dev/null || true
+            sleep 2
+          done
+        resources:
+          requests:
+            cpu: 500m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 256Mi

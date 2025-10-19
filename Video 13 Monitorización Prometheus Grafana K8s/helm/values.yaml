@@ -1,0 +1,15 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+      - job_name: 'aspnetcore-metrics-app'
+        static_configs:
+          - targets: ['aspnetcore-metrics-service.default.svc.cluster.local:8080']
+        metrics_path: '/metrics'
+        scrape_interval: 30s
+        scrape_timeout: 10s
+
+grafana:
+  adminPassword: admin
+  service:
+    type: NodePort
