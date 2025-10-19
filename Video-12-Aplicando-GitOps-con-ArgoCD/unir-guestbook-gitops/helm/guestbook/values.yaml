@@ -1,9 +1,9 @@
 replicaCount: 2
 
 image:
-  repository: /guestbook-unir
+  repository: docker.io/library/guestbook-unir
   tag: local
-  pullPolicy: IfNotPresent
+  pullPolicy: Never
 
 service:
   type: ClusterIP
